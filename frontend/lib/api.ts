@@ -302,6 +302,36 @@ export const analyticsAPI = {
     })
     return response.data
   },
+
+  fetchWidgetData: async (config: {
+      dataSource: string
+      metric: string
+      dimension?: string
+      aggregation: string
+      dateRange?: { start: Date | null; end: Date | null }
+      limit?: number
+      sortBy?: string
+      filters?: Record<string, any>
+    }) => {
+      const payload = {
+        data_source: config.dataSource,
+        metric: config.metric,
+        dimension: config.dimension,
+        aggregation: config.aggregation,
+        date_range: config.dateRange ? {
+          start: config.dateRange.start ? config.dateRange.start.toISOString() : null,
+          end: config.dateRange.end ? config.dateRange.end.toISOString() : null
+        } : null,
+        limit: config.limit || 10,
+        sort_by: config.sortBy || 'desc',
+        filters: config.filters
+      }
+
+      console.log('Widget Data API call with payload:', payload)
+
+      const response = await api.post('/analytics/widget-data', payload)
+      return response.data
+  },
   
   // ========== FIM DAS NOVAS FUNÇÕES ==========
 }

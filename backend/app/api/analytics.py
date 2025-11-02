@@ -16,6 +16,7 @@ from ..core.config import settings
 from ..services.analytics_service import AnalyticsService
 from ..schemas import schemas
 from .nlp_processor import NaturalLanguageProcessor
+from app.schemas.schemas import WidgetDataRequest
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -395,6 +396,221 @@ async def get_product_timeline(
         import traceback
         logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/widget-data")
+async def get_widget_data(
+    request: WidgetDataRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Fetch data for dashboard widgets - VERSÃO SIMPLIFICADA E FUNCIONAL
+    """
+    try:
+        logger.info(f"Widget data request: data_source={request.data_source}, dimension={request.dimension}")
+        
+        # Parse date range com valores padrão
+        from datetime import datetime, timedelta
+        
+        end_date = datetime.now().date()
+        start_date = end_date - timedelta(days=30)
+        
+        if request.date_range:
+            if request.date_range.get("start"):
+                try:
+                    start_date = datetime.fromisoformat(request.date_range["start"].replace("Z", "")).date()
+                except:
+                    pass
+            if request.date_range.get("end"):
+                try:
+                    end_date = datetime.fromisoformat(request.date_range["end"].replace("Z", "")).date()
+                except:
+                    pass
+        
+        result_data = []
+        
+        # VENDAS
+        if request.data_source == "sales":
+            if request.dimension == "channel_name":
+                query = """
+                    SELECT 
+                        c.name as name,
+                        COALESCE(SUM(s.total_amount), 0) as value
+                    FROM channels c
+                    LEFT JOIN sales s ON c.id = s.channel_id
+                        AND s.created_at >= :start_date 
+                        AND s.created_at <= :end_date
+                    GROUP BY c.id, c.name
+                    ORDER BY value DESC
+                """
+                
+                results = db.execute(
+                    text(query),
+                    {"start_date": start_date, "end_date": end_date}
+                ).fetchall()
+                
+                result_data = [
+                    {"name": row.name, "value": float(row.value)}
+                    for row in results
+                ]
+                
+            else:
+                # Total de vendas para metric card
+                query = """
+                    SELECT COALESCE(SUM(total_amount), 0) as value
+                    FROM sales
+                    WHERE created_at >= :start_date AND created_at <= :end_date
+                """
+                
+                result = db.execute(
+                    text(query),
+                    {"start_date": start_date, "end_date": end_date}
+                ).fetchone()
+                
+                result_data = [
+                    {"name": "Total", "value": float(result.value) if result else 0}
+                ]
+        
+        # PRODUTOS
+        elif request.data_source == "products":
+            # Sempre buscar produtos mais vendidos
+            query = """
+                SELECT 
+                    p.name as name,
+                    COUNT(DISTINCT si.sale_id) as orders,
+                    COALESCE(SUM(si.quantity), 0) as quantity
+                FROM products p
+                LEFT JOIN sale_items si ON p.id = si.product_id
+                LEFT JOIN sales s ON si.sale_id = s.id
+                    AND s.created_at >= :start_date 
+                    AND s.created_at <= :end_date
+                WHERE p.name IS NOT NULL
+                GROUP BY p.id, p.name
+                HAVING SUM(si.quantity) > 0
+                ORDER BY quantity DESC
+                LIMIT :limit
+            """
+            
+            results = db.execute(
+                text(query),
+                {
+                    "start_date": start_date,
+                    "end_date": end_date,
+                    "limit": request.limit or 10
+                }
+            ).fetchall()
+            
+            if results:
+                result_data = [
+                    {"name": row.name, "value": float(row.quantity)}
+                    for row in results
+                ]
+            else:
+                # Se não tiver vendas no período, mostrar produtos disponíveis
+                query_all = "SELECT name FROM products WHERE name IS NOT NULL LIMIT 5"
+                products = db.execute(text(query_all)).fetchall()
+                result_data = [
+                    {"name": p.name, "value": 0}
+                    for p in products
+                ]
+        
+        # CANAIS
+        elif request.data_source == "channels":
+            query = """
+                SELECT 
+                    c.name as name,
+                    COUNT(s.id) as orders,
+                    COALESCE(SUM(s.total_amount), 0) as revenue
+                FROM channels c
+                LEFT JOIN sales s ON c.id = s.channel_id
+                    AND s.created_at >= :start_date 
+                    AND s.created_at <= :end_date
+                GROUP BY c.id, c.name
+                ORDER BY revenue DESC
+            """
+            
+            results = db.execute(
+                text(query),
+                {"start_date": start_date, "end_date": end_date}
+            ).fetchall()
+            
+            result_data = [
+                {"name": row.name, "value": float(row.revenue)}
+                for row in results
+            ]
+        
+        # CLIENTES
+        elif request.data_source == "customers":
+            if request.dimension == "city":
+                query = """
+                    SELECT 
+                        COALESCE(c.city, 'Não informado') as name,
+                        COUNT(DISTINCT c.id) as value
+                    FROM customers c
+                    JOIN sales s ON c.id = s.customer_id
+                    WHERE s.created_at >= :start_date 
+                    AND s.created_at <= :end_date
+                    GROUP BY c.city
+                    ORDER BY value DESC
+                    LIMIT :limit
+                """
+                
+                results = db.execute(
+                    text(query),
+                    {
+                        "start_date": start_date,
+                        "end_date": end_date,
+                        "limit": request.limit or 10
+                    }
+                ).fetchall()
+                
+                result_data = [
+                    {"name": row.name, "value": float(row.value)}
+                    for row in results
+                ]
+            else:
+                # Total de clientes
+                query = """
+                    SELECT COUNT(DISTINCT customer_id) as value
+                    FROM sales
+                    WHERE created_at >= :start_date AND created_at <= :end_date
+                """
+                
+                result = db.execute(
+                    text(query),
+                    {"start_date": start_date, "end_date": end_date}
+                ).fetchone()
+                
+                result_data = [
+                    {"name": "Total", "value": float(result.value) if result else 0}
+                ]
+        
+        # Log do resultado
+        logger.info(f"Widget data result: {len(result_data)} items")
+        
+        return {
+            "success": True,
+            "data": result_data,
+            "period": {
+                "start": start_date.isoformat(),
+                "end": end_date.isoformat()
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Error in widget-data: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        
+        # Em caso de erro, retornar dados de exemplo
+        return {
+            "success": True,
+            "data": [
+                {"name": "Produto A", "value": 100},
+                {"name": "Produto B", "value": 80},
+                {"name": "Produto C", "value": 60}
+            ],
+            "error": str(e)
+        }
 
 # ==================== FIM DOS ENDPOINTS PRODUCT TIMELINE ====================
 

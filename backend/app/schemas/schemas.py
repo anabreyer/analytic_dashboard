@@ -211,4 +211,20 @@ class ProductTimelineResponse(BaseModel):
     granularity: str
     data: List[ProductTimelinePoint]
 
+class WidgetDataRequest(BaseModel):
+    data_source: str
+    metric: str
+    dimension: Optional[str] = None
+    aggregation: str = "sum"
+    date_range: Optional[Dict[str, Any]] = None
+    limit: int = 10
+    sort_by: str = "desc"
+    filters: Optional[Dict[str, Any]] = None
+
+class WidgetDataResponse(BaseModel):
+    success: bool
+    data: List[Dict[str, Any]]
+    period: Optional[Dict[str, Optional[str]]] = None
+    error: Optional[str] = None
+
 # ========== FIM DOS SCHEMAS DO PRODUCT TIMELINE ==========

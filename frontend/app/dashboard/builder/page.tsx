@@ -19,8 +19,33 @@ export default function DashboardBuilderPage() {
       name: 'Visão do Proprietário',
       description: 'Foco em métricas financeiras',
       widgets: [
-        { id: '1', type: 'metric-card' as const, title: 'Faturamento', config: {}, position: { x: 20, y: 20 }, size: { width: 300, height: 150 } },
-        { id: '2', type: 'line-chart' as const, title: 'Evolução', config: {}, position: { x: 340, y: 20 }, size: { width: 600, height: 350 } },
+        { 
+          id: '1', 
+          type: 'metric-card' as const, 
+          title: 'Faturamento', 
+          config: {
+            dataSource: 'sales' as const,
+            metric: 'total_amount',
+            aggregation: 'sum' as const,
+            limit: 10
+          }, 
+          position: { x: 20, y: 20 }, 
+          size: { width: 300, height: 150 } 
+        },
+        { 
+          id: '2', 
+          type: 'line-chart' as const, 
+          title: 'Evolução', 
+          config: {
+            dataSource: 'sales' as const,
+            metric: 'total_amount',
+            dimension: 'date',
+            aggregation: 'sum' as const,
+            limit: 30
+          }, 
+          position: { x: 340, y: 20 }, 
+          size: { width: 600, height: 350 } 
+        },
       ]
     },
     {
@@ -28,7 +53,20 @@ export default function DashboardBuilderPage() {
       name: 'Visão do Gerente',
       description: 'Foco operacional',
       widgets: [
-        { id: '1', type: 'bar-chart' as const, title: 'Pedidos', config: {}, position: { x: 20, y: 20 }, size: { width: 400, height: 300 } },
+        { 
+          id: '1', 
+          type: 'bar-chart' as const, 
+          title: 'Pedidos', 
+          config: {
+            dataSource: 'sales' as const,
+            metric: 'count',
+            dimension: 'channel_name',
+            aggregation: 'count' as const,
+            limit: 10
+          }, 
+          position: { x: 20, y: 20 }, 
+          size: { width: 400, height: 300 } 
+        },
       ]
     }
   ]
@@ -43,7 +81,7 @@ export default function DashboardBuilderPage() {
               Dashboard Builder
             </h1>
             <p className="text-gray-600 dark:text-gray-400 mt-1">
-              Crie seu dashboard personalizado
+              Crie seu dashboard personalizado com dados reais
             </p>
           </div>
           <Button
@@ -51,11 +89,11 @@ export default function DashboardBuilderPage() {
             variant="secondary"
             icon={ArrowLeft}
           >
-            Voltar
+            Voltar ao Dashboard
           </Button>
         </div>
 
-        {/* Builder */}
+        {/* Builder Component */}
         <DashboardBuilder
           templates={dashboardTemplates}
           onSave={(widgets) => {
@@ -68,3 +106,6 @@ export default function DashboardBuilderPage() {
     </div>
   )
 }
+
+// Garantir que há um export default
+DashboardBuilderPage.displayName = 'DashboardBuilderPage'

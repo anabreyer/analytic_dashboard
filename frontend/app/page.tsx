@@ -20,6 +20,8 @@ import { Moon, Sun, FileDown, Filter, Brain, Grid, User, Share2, Package } from 
 import { useQuery } from '@tanstack/react-query'
 import { analyticsAPI } from '@/lib/api'
 import { useRouter } from 'next/navigation'
+import { PeriodComparison } from '@/components/dashboard/PeriodComparison'
+import { TrendingUp } from 'lucide-react' // Se ainda não tiver
 
 // Import NEW components
 import { MultiDimensionalFilter } from '@/components/filters/MultiDimensionalFilter'
@@ -76,6 +78,7 @@ export default function DashboardPage() {
   const [advancedFilters, setAdvancedFilters] = useState<Record<string, any>>({})
   const [currentProfile, setCurrentProfile] = useState<keyof typeof USER_PROFILES>('owner')
   const [showProfileMenu, setShowProfileMenu] = useState(false)
+  const [showPeriodComparison, setShowPeriodComparison] = useState(false)
 
   // Dark mode effect
   useEffect(() => {
@@ -301,6 +304,14 @@ export default function DashboardPage() {
               >
                 Customizar
               </Button>
+              <Button
+                onClick={() => setShowPeriodComparison(!showPeriodComparison)}
+                variant="secondary"
+                icon={TrendingUp}
+                className={showPeriodComparison ? 'bg-blue-100 border-blue-500' : ''}
+              >
+                Comparar Períodos
+</Button>
             </>
           )}
           
@@ -388,6 +399,25 @@ export default function DashboardPage() {
           />
         </Card>
       )}
+
+{showPeriodComparison && (
+  <Card className="border-2 border-purple-200 dark:border-purple-800 mt-6">
+    <div className="flex justify-between items-center mb-4">
+      <h2 className="text-lg font-semibold flex items-center gap-2">
+        <TrendingUp className="h-5 w-5" />
+        Comparação de Períodos
+      </h2>
+      <button
+        onClick={() => setShowPeriodComparison(false)}
+        className="text-gray-500 hover:text-gray-700 text-xl"
+      >
+        ×
+      </button>
+    </div>
+    <PeriodComparison />
+  </Card>
+)}
+      
 
       {/* Existing Insights Panel */}
       {canSee('insights') && (

@@ -385,38 +385,209 @@ class NaturalLanguageProcessor:
             logger.error(f"Erro em channel query: {str(e)}")
             return f"Erro ao analisar canais: {str(e)[:100]}"
     
-    def process_query(self, query: str) -> Dict[str, Any]:
+    def process_query(self, query: str, context: Dict = None) -> Dict[str, Any]:
         """
-        Processa a query principal e retorna resposta estruturada
+        Processa a query principal - VERSÃO SIMPLIFICADA E FUNCIONAL
         """
         try:
-            # Sempre limpar transações com erro antes de começar
+            # Rollback de transações pendentes
             self.db.rollback()
-            
-            # Extrair contextos
-            time_context = self.extract_time_context(query)
-            channel = self.extract_channel_context(query)
-            metric = self.extract_metric_context(query)
             
             query_lower = query.lower()
             
-            # Determinar tipo de query e processar
-            if ('ticket médio' in query_lower or 'ticket medio' in query_lower):
-                answer = self.process_simple_ticket_query(query)
-                interpretation = 'ticket_simple'
+            # 1. VENDAS/FATURAMENTO
+            if any(word in query_lower for word in ['vendi', 'vendeu', 'faturamento', 'quanto']):
+                # Verificar período
+                if 'ontem' in query_lower:
+                    yesterday = date.today() - timedelta(days=1)
+                    result = self.db.execute(
+                        text("""
+                            SELECT 
+                                COUNT(*) as count,
+                                COALESCE(SUM(total_amount), 0) as revenue,
+                                COALESCE(AVG(total_amount), 0) as avg_ticket
+                            FROM sales
+                            WHERE DATE(created_at) = :date
+                        """),
+                        {"date": yesterday}
+                    ).fetchone()
+                    
+                    if result:
+                        answer = f"📊 **Vendas de Ontem ({yesterday.strftime('%d/%m/%Y')})**\n\n"
+                        answer += f"• Total de vendas: {result[0]}\n"
+                        answer += f"• Faturamento: R$ {result[1]:,.2f}\n"
+                        answer += f"• Ticket médio: R$ {result[2]:.2f}"
+                    else:
+                        answer = "Não houve vendas ontem."
+                        
+                elif 'hoje' in query_lower:
+                    today = date.today()
+                    result = self.db.execute(
+                        text("""
+                            SELECT 
+                                COUNT(*) as count,
+                                COALESCE(SUM(total_amount), 0) as revenue,
+                                COALESCE(AVG(total_amount), 0) as avg_ticket
+                            FROM sales
+                            WHERE DATE(created_at) = :date
+                        """),
+                        {"date": today}
+                    ).fetchone()
+                    
+                    if result:
+                        answer = f"📊 **Vendas de Hoje ({today.strftime('%d/%m/%Y')})**\n\n"
+                        answer += f"• Total de vendas: {result[0]}\n"
+                        answer += f"• Faturamento: R$ {result[1]:,.2f}\n"
+                        answer += f"• Ticket médio: R$ {result[2]:.2f}"
+                    else:
+                        answer = "Ainda não há vendas hoje."
+                        
+                else:
+                    # Últimos 30 dias
+                    result = self.db.execute(
+                        text("""
+                            SELECT 
+                                COUNT(*) as count,
+                                COALESCE(SUM(total_amount), 0) as revenue,
+                                COALESCE(AVG(total_amount), 0) as avg_ticket
+                            FROM sales
+                            WHERE created_at >= CURRENT_DATE - INTERVAL '30 days'
+                        """)
+                    ).fetchone()
+                    
+                    if result:
+                        answer = f"📊 **Vendas dos Últimos 30 Dias**\n\n"
+                        answer += f"• Total de vendas: {result[0]}\n"
+                        answer += f"• Faturamento: R$ {result[1]:,.2f}\n"
+                        answer += f"• Ticket médio: R$ {result[2]:.2f}"
+                    else:
+                        answer = "Não há dados de vendas disponíveis."
+                
+                return {
+                    'query': query,
+                    'answer': answer,
+                    'interpretation': 'revenue_query',
+                    'confidence': 0.9,
+                    'context': {}
+                }
             
-            elif metric == 'revenue' or any(word in query_lower for word in ['vendi', 'vendeu', 'faturamento']):
-                answer = self.process_revenue_query(query, time_context, channel)
-                interpretation = 'revenue_query'
+            # 2. PRODUTO MAIS VENDIDO
+            elif 'produto' in query_lower and ('mais' in query_lower or 'vendido' in query_lower):
+                result = self.db.execute(
+                    text("""
+                        SELECT 
+                            p.name,
+                            SUM(si.quantity) as total_qty,
+                            COUNT(DISTINCT si.sale_id) as times_sold,
+                            SUM(si.total_price) as revenue
+                        FROM products p
+                        JOIN sale_items si ON p.id = si.product_id
+                        WHERE si.sale_id IN (
+                            SELECT id FROM sales 
+                            WHERE created_at >= CURRENT_DATE - INTERVAL '30 days'
+                        )
+                        GROUP BY p.id, p.name
+                        ORDER BY total_qty DESC
+                        LIMIT 5
+                    """)
+                ).fetchall()
+                
+                if result:
+                    top = result[0]
+                    answer = f"🏆 **Produto Mais Vendido: {top[0]}**\n\n"
+                    answer += f"📊 **Performance (últimos 30 dias):**\n"
+                    answer += f"• Quantidade vendida: {top[1]} unidades\n"
+                    answer += f"• Vendido em: {top[2]} pedidos\n"
+                    answer += f"• Faturamento: R$ {top[3]:,.2f}\n\n"
+                    
+                    if len(result) > 1:
+                        answer += "**Outros produtos populares:**\n"
+                        for prod in result[1:4]:
+                            answer += f"• {prod[0]}: {prod[1]} unidades\n"
+                else:
+                    answer = "Não há dados de produtos vendidos."
+                
+                return {
+                    'query': query,
+                    'answer': answer,
+                    'interpretation': 'product_query',
+                    'confidence': 0.9,
+                    'context': {}
+                }
             
-            elif metric == 'products' or 'produto mais vendido' in query_lower:
-                answer = self.process_products_query(query)
-                interpretation = 'product_query'
+            # 3. TICKET MÉDIO
+            elif 'ticket' in query_lower and ('médio' in query_lower or 'medio' in query_lower):
+                result = self.db.execute(
+                    text("""
+                        SELECT 
+                            AVG(total_amount) as avg_ticket,
+                            COUNT(*) as total_sales,
+                            MIN(total_amount) as min_ticket,
+                            MAX(total_amount) as max_ticket
+                        FROM sales
+                        WHERE created_at >= CURRENT_DATE - INTERVAL '30 days'
+                    """)
+                ).fetchone()
+                
+                if result and result[1] > 0:
+                    answer = f"💰 **Ticket Médio (últimos 30 dias)**\n\n"
+                    answer += f"• Valor médio: R$ {result[0]:.2f}\n"
+                    answer += f"• Total de vendas: {result[1]}\n"
+                    answer += f"• Menor ticket: R$ {result[2]:.2f}\n"
+                    answer += f"• Maior ticket: R$ {result[3]:.2f}"
+                else:
+                    answer = "Não há dados para calcular o ticket médio."
+                
+                return {
+                    'query': query,
+                    'answer': answer,
+                    'interpretation': 'ticket_query',
+                    'confidence': 0.95,
+                    'context': {}
+                }
             
-            elif 'melhor canal' in query_lower or metric == 'channel':
-                answer = self.process_best_channel_query(query)
-                interpretation = 'channel_query'
+            # 4. MELHOR CANAL
+            elif 'canal' in query_lower or ('melhor' in query_lower and 'venda' in query_lower):
+                result = self.db.execute(
+                    text("""
+                        SELECT 
+                            ch.name,
+                            COUNT(*) as total_sales,
+                            COALESCE(SUM(s.total_amount), 0) as revenue,
+                            COALESCE(AVG(s.total_amount), 0) as avg_ticket
+                        FROM channels ch
+                        JOIN sales s ON ch.id = s.channel_id
+                        WHERE s.created_at >= CURRENT_DATE - INTERVAL '30 days'
+                        GROUP BY ch.id, ch.name
+                        ORDER BY revenue DESC
+                        LIMIT 5
+                    """)
+                ).fetchall()
+                
+                if result:
+                    best = result[0]
+                    answer = f"🏆 **Melhor Canal: {best[0]}**\n\n"
+                    answer += f"📊 **Performance (últimos 30 dias):**\n"
+                    answer += f"• Faturamento: R$ {best[2]:,.2f}\n"
+                    answer += f"• Total de vendas: {best[1]}\n"
+                    answer += f"• Ticket médio: R$ {best[3]:.2f}\n\n"
+                    
+                    if len(result) > 1:
+                        answer += "**Outros canais:**\n"
+                        for ch in result[1:3]:
+                            answer += f"• {ch[0]}: R$ {ch[2]:,.2f}\n"
+                else:
+                    answer = "Não há dados de canais disponíveis."
+                
+                return {
+                    'query': query,
+                    'answer': answer,
+                    'interpretation': 'channel_query',
+                    'confidence': 0.9,
+                    'context': {}
+                }
             
+            # 5. RESPOSTA PADRÃO
             else:
                 answer = (
                     "Desculpe, não entendi completamente sua pergunta. Posso ajudar com:\n\n"
@@ -425,30 +596,91 @@ class NaturalLanguageProcessor:
                     "• **Ticket médio**: 'Mostre o ticket médio'\n"
                     "• **Canais**: 'Qual o melhor canal de vendas?'\n"
                 )
-                interpretation = 'help'
-            
-            # Determinar confiança
-            confidence = 0.9 if interpretation != 'help' else 0.3
-            
-            return {
-                'answer': answer,
-                'interpretation': interpretation,
-                'confidence': confidence,
-                'context': {
-                    'time': time_context,
-                    'channel': channel,
-                    'metric': metric
+                
+                return {
+                    'query': query,
+                    'answer': answer,
+                    'interpretation': 'help',
+                    'confidence': 0.3,
+                    'context': {}
                 }
-            }
             
         except Exception as e:
-            # Sempre fazer rollback em caso de erro
+            # Rollback em caso de erro
             self.db.rollback()
-            logger.error(f"Erro geral no NLP: {str(e)}")
+            logger.error(f"Erro no process_query: {str(e)}")
             
             return {
-                'answer': f"Erro ao processar pergunta. Tente novamente.",
+                'query': query,
+                'answer': 'Desculpe, ocorreu um erro ao processar sua pergunta. Tente novamente.',
                 'interpretation': 'error',
                 'confidence': 0.0,
                 'context': {}
             }
+
+            """
+            Processa a query principal e retorna resposta estruturada
+            """
+            try:
+                # Sempre limpar transações com erro antes de começar
+                self.db.rollback()
+                
+                # Extrair contextos
+                time_context = self.extract_time_context(query)
+                channel = self.extract_channel_context(query)
+                metric = self.extract_metric_context(query)
+                
+                query_lower = query.lower()
+                
+                # Determinar tipo de query e processar
+                if ('ticket médio' in query_lower or 'ticket medio' in query_lower):
+                    answer = self.process_simple_ticket_query(query)
+                    interpretation = 'ticket_simple'
+                
+                elif metric == 'revenue' or any(word in query_lower for word in ['vendi', 'vendeu', 'faturamento']):
+                    answer = self.process_revenue_query(query, time_context, channel)
+                    interpretation = 'revenue_query'
+                
+                elif metric == 'products' or 'produto mais vendido' in query_lower:
+                    answer = self.process_products_query(query)
+                    interpretation = 'product_query'
+                
+                elif 'melhor canal' in query_lower or metric == 'channel':
+                    answer = self.process_best_channel_query(query)
+                    interpretation = 'channel_query'
+                
+                else:
+                    answer = (
+                        "Desculpe, não entendi completamente sua pergunta. Posso ajudar com:\n\n"
+                        "• **Vendas**: 'Quanto vendi ontem?'\n"
+                        "• **Produtos**: 'Qual o produto mais vendido?'\n"
+                        "• **Ticket médio**: 'Mostre o ticket médio'\n"
+                        "• **Canais**: 'Qual o melhor canal de vendas?'\n"
+                    )
+                    interpretation = 'help'
+                
+                # Determinar confiança
+                confidence = 0.9 if interpretation != 'help' else 0.3
+                
+                return {
+                    'answer': answer,
+                    'interpretation': interpretation,
+                    'confidence': confidence,
+                    'context': {
+                        'time': time_context,
+                        'channel': channel,
+                        'metric': metric
+                    }
+                }
+                
+            except Exception as e:
+                # Sempre fazer rollback em caso de erro
+                self.db.rollback()
+                logger.error(f"Erro geral no NLP: {str(e)}")
+                
+                return {
+                    'answer': f"Erro ao processar pergunta. Tente novamente.",
+                    'interpretation': 'error',
+                    'confidence': 0.0,
+                    'context': {}
+                }

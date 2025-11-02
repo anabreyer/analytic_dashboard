@@ -23,7 +23,7 @@ import { useRouter } from 'next/navigation'
 
 // Import NEW components
 import { MultiDimensionalFilter } from '@/components/filters/MultiDimensionalFilter'
-import { IntelligentInsights } from '@/components/ai/IntelligentInsights'
+
 import { ProductTimelineChart } from '@/components/dashboard/ProductTimelineChart'
 
 // User profiles configuration
@@ -292,14 +292,6 @@ export default function DashboardPage() {
                 icon={Brain}
                 className={showInsights ? 'bg-purple-100 border-purple-500' : ''}
               >
-                Insights IA
-              </Button>
-              <Button
-                onClick={() => setShowProductAnalysis(!showProductAnalysis)}
-                variant="secondary"
-                icon={Package}
-                className={showProductAnalysis ? 'bg-blue-100 border-blue-500' : ''}
-              >
                 Análise de Produto
               </Button>
               <Button
@@ -373,14 +365,6 @@ export default function DashboardPage() {
           onFilterChange={setAdvancedFilters}
           onSaveFilter={handleSaveFilter}
           savedFilters={getSavedFilters()}
-        />
-      )}
-
-      {/* AI Insights Section */}
-      {showInsights && canSee('insights') && (
-        <IntelligentInsights
-          filters={advancedFilters}
-          onActionClick={handleInsightAction}
         />
       )}
 

@@ -25,7 +25,6 @@ import { NaturalLanguageSearch } from '@/components/dashboard/NaturalLanguageSea
 
 // Import new advanced components
 import { MultiDimensionalFilter } from '@/components/filters/MultiDimensionalFilter'
-import { IntelligentInsights } from '@/components/ai/IntelligentInsights'
 import { DashboardBuilder } from '@/components/dashboard/DashboardBuilder'
 import { ComparativeDashboard } from '@/components/analytics/ComparativeDashboard'
 import { PredictiveAnalytics } from '@/components/analytics/PredictiveAnalytics'
@@ -166,8 +165,6 @@ export default function AdvancedDashboardPage() {
               Análise de Produto
             </TabsTrigger>
             
-            <TabsTrigger value="insights" icon={Brain}>
-              Insights IA
             </TabsTrigger>
             <TabsTrigger value="custom" icon={Grid}>
               Dashboard Custom
@@ -280,13 +277,6 @@ export default function AdvancedDashboardPage() {
             />
           </TabsPanel>
 
-          {/* AI Insights Tab */}
-          <TabsPanel value="insights" className="mt-6">
-            <IntelligentInsights
-              filters={advancedFilters}
-              onActionClick={handleInsightAction}
-            />
-          </TabsPanel>
 
           {/* Custom Dashboard Tab */}
           <TabsPanel value="custom" className="mt-6">

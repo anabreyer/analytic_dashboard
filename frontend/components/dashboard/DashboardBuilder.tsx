@@ -228,137 +228,262 @@ function WidgetConfigPanel({
 
   const dataSourceOptions = DATA_SOURCE_CONFIG[config.dataSource] || DATA_SOURCE_CONFIG.sales
 
-  // Configuração simplificada para tabelas
-  if (widget.type === 'table') {
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-          <div className="flex justify-between items-center mb-4">
-            <Title>Configurar Tabela</Title>
-            <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
-              <X className="h-5 w-5" />
-            </button>
-          </div>
+// Configuração simplificada para tabelas
+if (widget.type === 'table') {
+  // Estado local para controlar o formulário
+  const [localConfig, setLocalConfig] = useState({
+    dataSource: config.dataSource || 'sales',
+    dimension: config.dimension || 'channel_name',
+    metric: config.metric || 'total_amount',
+    limit: config.limit || 10,
+    sortBy: config.sortBy || 'desc',
+    dateRange: config.dateRange || { start: null, end: null }
+  })
 
-          <div className="space-y-4">
-            {/* Date Range Selector */}
-            <div>
-              <Text className="font-medium mb-2 flex items-center gap-1">
-                <CalendarIcon className="h-4 w-4" />
-                Período dos Dados
-              </Text>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="text-xs text-gray-600">Data Inicial</label>
-                  <input
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => handleDateChange('start', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-gray-600">Data Final</label>
-                  <input
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => handleDateChange('end', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
-              <div className="flex gap-2 mt-2">
-                <button
-                  onClick={() => handleQuickDateRange(7)}
-                  className="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded"
-                >
-                  Últimos 7 dias
-                </button>
-                <button
-                  onClick={() => handleQuickDateRange(30)}
-                  className="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded"
-                >
-                  Últimos 30 dias
-                </button>
-              </div>
-            </div>
+  const [tableOption, setTableOption] = useState(
+    `${localConfig.dataSource}_${localConfig.dimension || ''}`
+  )
 
-            {/* Escolher o que mostrar */}
-            <div>
-              <Text className="font-medium mb-2">O que você quer analisar?</Text>
-              <select 
-                value={`${config.dataSource}_${config.dimension || ''}`}
-                onChange={(e) => {
-                  const [source, dim] = e.target.value.split('_')
-                  handleConfigChange('dataSource', source)
-                  handleConfigChange('dimension', dim)
-                  // Auto-selecionar métrica apropriada
-                  if (source === 'sales' || source === 'channels') {
-                    handleConfigChange('metric', 'total_amount')
-                  } else if (source === 'products') {
-                    handleConfigChange('metric', 'quantity')
-                  }
-                }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <optgroup label="Vendas">
-                  <option value="sales_channel_name">Faturamento por Canal</option>
-                  <option value="sales_date">Faturamento por Data</option>
-                  <option value="sales_day_of_week">Faturamento por Dia da Semana</option>
-                </optgroup>
-                <optgroup label="Produtos">
-                  <option value="products_product_name">Quantidade por Produto</option>
-                  <option value="products_category">Quantidade por Categoria</option>
-                </optgroup>
-                <optgroup label="Canais">
-                  <option value="channels_">Performance dos Canais</option>
-                </optgroup>
-                <optgroup label="Clientes">
-                  <option value="customers_city">Clientes por Cidade</option>
-                </optgroup>
-              </select>
-            </div>
-
-            {/* Limite de linhas */}
-            <div>
-              <Text className="font-medium mb-2">Quantas linhas mostrar?</Text>
-              <input
-                type="number"
-                value={config.limit || 10}
-                onChange={(e) => handleConfigChange('limit', parseInt(e.target.value) || 10)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                min="5"
-                max="50"
-              />
-            </div>
-
-            {/* Ordenação */}
-            <div>
-              <Text className="font-medium mb-2">Ordenar por valor</Text>
-              <select 
-                value={config.sortBy || 'desc'}
-                onChange={(e) => handleConfigChange('sortBy', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="desc">Maior para menor</option>
-                <option value="asc">Menor para maior</option>
-              </select>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex justify-end gap-2 pt-4 border-t">
-              <Button variant="secondary" onClick={onClose}>
-                Cancelar
-              </Button>
-              <Button onClick={handleSave} color="blue">
-                Aplicar Configurações
-              </Button>
-            </div>
-          </div>
-        </Card>
-      </div>
-    )
+  // Função para atualizar configuração local
+  const updateLocalConfig = (key: string, value: any) => {
+    setLocalConfig(prev => ({ ...prev, [key]: value }))
   }
+
+  const handleTableOptionChange = (value: string) => {
+    setTableOption(value)
+    
+    // Parse do valor selecionado
+    let source = ''
+    let dim = ''
+    let metric = ''
+    
+    switch(value) {
+      case 'sales_channel_name':
+        source = 'sales'
+        dim = 'channel_name'
+        metric = 'total_amount'
+        break
+      case 'sales_date':
+        source = 'sales'
+        dim = 'date'
+        metric = 'total_amount'
+        break
+      case 'sales_day_of_week':
+        source = 'sales'
+        dim = 'day_of_week'
+        metric = 'total_amount'
+        break
+      case 'products_product_name':
+        source = 'products'
+        dim = 'product_name'
+        metric = 'quantity'
+        break
+      case 'products_category':
+        source = 'products'
+        dim = 'category'
+        metric = 'quantity'
+        break
+      case 'channels_':
+        source = 'channels'
+        dim = ''
+        metric = 'revenue'
+        break
+      case 'customers_city':
+        source = 'customers'
+        dim = 'city'
+        metric = 'count'
+        break
+    }
+    
+    // Atualizar configuração local
+    updateLocalConfig('dataSource', source)
+    updateLocalConfig('dimension', dim)
+    updateLocalConfig('metric', metric)
+    
+    console.log('Configuração atualizada:', { source, dim, metric })
+  }
+
+  const handleTableDateChange = (type: 'start' | 'end', value: string) => {
+    const currentRange = localConfig.dateRange || { start: null, end: null }
+    const newDate = value ? new Date(value) : null
+    
+    const newDateRange = {
+      ...currentRange,
+      [type]: newDate
+    }
+    
+    updateLocalConfig('dateRange', newDateRange)
+    
+    // Atualizar estados de data visual
+    if (type === 'start') {
+      setStartDate(value)
+    } else {
+      setEndDate(value)
+    }
+  }
+
+  const handleTableQuickDateRange = (days: number) => {
+    const end = new Date()
+    const start = subDays(end, days)
+    const dateRange = { start, end }
+    
+    setStartDate(format(start, 'yyyy-MM-dd'))
+    setEndDate(format(end, 'yyyy-MM-dd'))
+    updateLocalConfig('dateRange', dateRange)
+  }
+
+  // Função para salvar e aplicar todas as mudanças
+  const handleTableSave = () => {
+    console.log('Salvando configuração da tabela:', localConfig)
+    
+    // Criar nova configuração completa
+    const newConfig = {
+      ...config, // Manter outras configurações
+      ...localConfig, // Aplicar mudanças locais
+      showLegend: config.showLegend,
+      showAnimation: config.showAnimation,
+      aggregation: localConfig.metric === 'count' ? 'count' : 'sum'
+    }
+    
+    console.log('Nova configuração completa:', newConfig)
+    
+    // Aplicar a configuração ao widget
+    onUpdate(newConfig)
+    
+    // Fechar o modal
+    onClose()
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="flex justify-between items-center mb-4">
+          <Title>Configurar Tabela</Title>
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="space-y-4">
+          {/* Date Range Selector */}
+          <div>
+            <Text className="font-medium mb-2 flex items-center gap-1">
+              <CalendarIcon className="h-4 w-4" />
+              Período dos Dados
+            </Text>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-xs text-gray-600">Data Inicial</label>
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => handleTableDateChange('start', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-gray-600">Data Final</label>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => handleTableDateChange('end', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+            <div className="flex gap-2 mt-2">
+              <button
+                onClick={() => handleTableQuickDateRange(7)}
+                className="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded"
+              >
+                Últimos 7 dias
+              </button>
+              <button
+                onClick={() => handleTableQuickDateRange(30)}
+                className="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded"
+              >
+                Últimos 30 dias
+              </button>
+            </div>
+          </div>
+
+          {/* Escolher o que mostrar */}
+          <div>
+            <Text className="font-medium mb-2">O que você quer analisar?</Text>
+            <select 
+              value={tableOption}
+              onChange={(e) => handleTableOptionChange(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+            >
+              <optgroup label="Vendas">
+                <option value="sales_channel_name">Faturamento por Canal</option>
+                <option value="sales_date">Faturamento por Data</option>
+                <option value="sales_day_of_week">Faturamento por Dia da Semana</option>
+              </optgroup>
+              <optgroup label="Produtos">
+                <option value="products_product_name">Quantidade por Produto</option>
+                <option value="products_category">Quantidade por Categoria</option>
+              </optgroup>
+              <optgroup label="Canais">
+                <option value="channels_">Performance dos Canais</option>
+              </optgroup>
+              <optgroup label="Clientes">
+                <option value="customers_city">Clientes por Cidade</option>
+              </optgroup>
+            </select>
+            
+            {/* Info de debug - pode remover depois */}
+            <div className="mt-2 p-2 bg-gray-100 rounded text-xs">
+              <Text className="text-gray-600">Debug Info:</Text>
+              <Text className="text-gray-600">Fonte: {localConfig.dataSource}</Text>
+              <Text className="text-gray-600">Dimensão: {localConfig.dimension || 'nenhuma'}</Text>
+              <Text className="text-gray-600">Métrica: {localConfig.metric}</Text>
+            </div>
+          </div>
+
+          {/* Limite de linhas */}
+          <div>
+            <Text className="font-medium mb-2">Quantas linhas mostrar?</Text>
+            <input
+              type="number"
+              value={localConfig.limit}
+              onChange={(e) => updateLocalConfig('limit', parseInt(e.target.value) || 10)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              min="5"
+              max="50"
+            />
+          </div>
+
+          {/* Ordenação */}
+          <div>
+            <Text className="font-medium mb-2">Ordenar por valor</Text>
+            <select 
+              value={localConfig.sortBy}
+              onChange={(e) => updateLocalConfig('sortBy', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+            >
+              <option value="desc">Maior para menor</option>
+              <option value="asc">Menor para maior</option>
+            </select>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex justify-end gap-2 pt-4 border-t">
+            <Button variant="secondary" onClick={onClose}>
+              Cancelar
+            </Button>
+            <Button 
+              onClick={handleTableSave} 
+              color="blue"
+            >
+              Aplicar Configurações
+            </Button>
+          </div>
+        </div>
+      </Card>
+    </div>
+  )
+}
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">

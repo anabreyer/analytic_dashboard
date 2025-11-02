@@ -684,3 +684,667 @@ class NaturalLanguageProcessor:
                     'confidence': 0.0,
                     'context': {}
                 }
+
+def process_complex_product_query(self, query: str) -> Dict[str, Any]:
+    """
+    Processa queries complexas sobre produtos com múltiplos filtros
+    Ex: "Qual produto vende mais na quinta à noite no iFood?"
+    """
+    try:
+        query_lower = query.lower()
+        
+        # Extrair contextos
+        day_of_week = None
+        time_period = None
+        channel = None
+        
+        # Detectar dia da semana
+        for day, day_num in self.weekdays.items():
+            if day in query_lower:
+                day_of_week = day_num
+                break
+        
+        # Detectar período do dia
+        for period, (start_hour, end_hour) in self.day_periods.items():
+            if period in query_lower:
+                time_period = (start_hour, end_hour)
+                break
+        
+        # Detectar canal
+        for ch_key, ch_name in self.channels.items():
+            if ch_key in query_lower:
+                channel = ch_name
+                break
+        
+        # Construir query SQL dinâmica
+        query_parts = ["""
+            SELECT 
+                p.name as product_name,
+                SUM(si.quantity) as total_quantity,
+                COUNT(DISTINCT s.id) as total_orders,
+                SUM(si.total_price) as revenue,
+                AVG(si.unit_price) as avg_price
+            FROM products p
+            JOIN sale_items si ON p.id = si.product_id
+            JOIN sales s ON si.sale_id = s.id
+        """]
+        
+        conditions = ["s.created_at >= CURRENT_DATE - INTERVAL '30 days'"]
+        
+        # Adicionar JOIN de canal se necessário
+        if channel:
+            query_parts.append("JOIN channels ch ON s.channel_id = ch.id")
+            conditions.append(f"ch.name = '{channel}'")
+        
+        # Filtro de dia da semana
+        if day_of_week is not None:
+            conditions.append(f"EXTRACT(DOW FROM s.created_at) = {day_of_week}")
+        
+        # Filtro de período do dia
+        if time_period:
+            conditions.append(f"EXTRACT(HOUR FROM s.created_at) >= {time_period[0]}")
+            conditions.append(f"EXTRACT(HOUR FROM s.created_at) < {time_period[1]}")
+        
+        # Montar query completa
+        if conditions:
+            query_parts.append("WHERE " + " AND ".join(conditions))
+        
+        query_parts.append("""
+            GROUP BY p.id, p.name
+            ORDER BY total_quantity DESC
+            LIMIT 5
+        """)
+        
+        final_query = " ".join(query_parts)
+        result = self.db.execute(text(final_query)).fetchall()
+        
+        if result:
+            # Construir resposta
+            filters_desc = []
+            if day_of_week is not None:
+                days = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado']
+                filters_desc.append(f"às {days[day_of_week]}s")
+            if time_period:
+                for period, hours in self.day_periods.items():
+                    if hours == time_period:
+                        filters_desc.append(f"no período da {period}")
+                        break
+            if channel:
+                filters_desc.append(f"no {channel}")
+            
+            filter_text = " ".join(filters_desc) if filters_desc else "geral"
+            
+            top = result[0]
+            answer = f"📊 **Produto mais vendido {filter_text}:**\n\n"
+            answer += f"🏆 **{top[0]}**\n"
+            answer += f"• Quantidade: {top[1]} unidades\n"
+            answer += f"• Pedidos: {top[2]}\n"
+            answer += f"• Faturamento: R$ {top[3]:,.2f}\n"
+            answer += f"• Preço médio: R$ {top[4]:.2f}\n\n"
+            
+            if len(result) > 1:
+                answer += "**Outros produtos neste contexto:**\n"
+                for prod in result[1:4]:
+                    answer += f"• {prod[0]}: {prod[1]} unidades (R$ {prod[3]:,.2f})\n"
+            
+            return {
+                'query': query,
+                'answer': answer,
+                'interpretation': 'complex_product_query',
+                'confidence': 0.85,
+                'context': {
+                    'day_of_week': day_of_week,
+                    'time_period': time_period,
+                    'channel': channel
+                }
+            }
+        else:
+            return {
+                'query': query,
+                'answer': f"Não encontrei vendas com esses critérios específicos nos últimos 30 dias.",
+                'interpretation': 'complex_product_query',
+                'confidence': 0.7,
+                'context': {}
+            }
+            
+    except Exception as e:
+        logger.error(f"Erro em complex product query: {str(e)}")
+        return {
+            'query': query,
+            'answer': 'Erro ao processar consulta complexa de produtos.',
+            'interpretation': 'error',
+            'confidence': 0.0,
+            'context': {}
+        }
+
+def analyze_ticket_trend(self, query: str) -> Dict[str, Any]:
+    """
+    Analisa tendências do ticket médio por canal e loja
+    Ex: "Meu ticket médio está caindo. É por canal ou por loja?"
+    """
+    try:
+        # Análise por canal
+        channel_query = """
+            WITH current_period AS (
+                SELECT 
+                    ch.name as channel,
+                    AVG(s.total_amount) as current_avg,
+                    COUNT(*) as current_count
+                FROM sales s
+                JOIN channels ch ON s.channel_id = ch.id
+                WHERE s.created_at >= CURRENT_DATE - INTERVAL '7 days'
+                GROUP BY ch.name
+            ),
+            previous_period AS (
+                SELECT 
+                    ch.name as channel,
+                    AVG(s.total_amount) as previous_avg,
+                    COUNT(*) as previous_count
+                FROM sales s
+                JOIN channels ch ON s.channel_id = ch.id
+                WHERE s.created_at >= CURRENT_DATE - INTERVAL '14 days'
+                AND s.created_at < CURRENT_DATE - INTERVAL '7 days'
+                GROUP BY ch.name
+            )
+            SELECT 
+                COALESCE(c.channel, p.channel) as channel_name,
+                COALESCE(c.current_avg, 0) as current_ticket,
+                COALESCE(p.previous_avg, 0) as previous_ticket,
+                CASE 
+                    WHEN p.previous_avg > 0 THEN 
+                        ((c.current_avg - p.previous_avg) / p.previous_avg * 100)
+                    ELSE 0 
+                END as change_percent
+            FROM current_period c
+            FULL OUTER JOIN previous_period p ON c.channel = p.channel
+            ORDER BY change_percent ASC
+        """
+        
+        channel_results = self.db.execute(text(channel_query)).fetchall()
+        
+        answer = "📊 **Análise de Ticket Médio (últimos 7 dias vs 7 dias anteriores)**\n\n"
+        
+        # Análise por canal
+        answer += "**Por Canal:**\n"
+        declining_channels = []
+        growing_channels = []
+        
+        for row in channel_results:
+            if row[3] < -5:  # Queda maior que 5%
+                declining_channels.append(row)
+            elif row[3] > 5:  # Crescimento maior que 5%
+                growing_channels.append(row)
+        
+        if declining_channels:
+            answer += "🔴 **Canais com queda:**\n"
+            for ch in declining_channels:
+                answer += f"• {ch[0]}: R$ {ch[1]:.2f} (↓ {abs(ch[3]):.1f}%)\n"
+        
+        if growing_channels:
+            answer += "\n🟢 **Canais em crescimento:**\n"
+            for ch in growing_channels:
+                answer += f"• {ch[0]}: R$ {ch[1]:.2f} (↑ {ch[3]:.1f}%)\n"
+        
+        # Análise geral
+        overall_query = """
+            SELECT 
+                AVG(CASE WHEN created_at >= CURRENT_DATE - INTERVAL '7 days' 
+                    THEN total_amount END) as current_avg,
+                AVG(CASE WHEN created_at < CURRENT_DATE - INTERVAL '7 days' 
+                    THEN total_amount END) as previous_avg
+            FROM sales
+            WHERE created_at >= CURRENT_DATE - INTERVAL '14 days'
+        """
+        
+        overall = self.db.execute(text(overall_query)).fetchone()
+        
+        if overall[0] and overall[1]:
+            change = ((overall[0] - overall[1]) / overall[1]) * 100
+            answer += f"\n**Ticket Médio Geral:**\n"
+            answer += f"• Atual: R$ {overall[0]:.2f}\n"
+            answer += f"• Anterior: R$ {overall[1]:.2f}\n"
+            answer += f"• Variação: {change:+.1f}%\n"
+            
+            # Diagnóstico
+            if declining_channels:
+                answer += f"\n💡 **Diagnóstico:** A queda está concentrada em {len(declining_channels)} canal(is). "
+                answer += f"Recomendo focar ações promocionais em: {declining_channels[0][0]}"
+        
+        return {
+            'query': query,
+            'answer': answer,
+            'interpretation': 'ticket_trend_analysis',
+            'confidence': 0.9,
+            'context': {}
+        }
+        
+    except Exception as e:
+        logger.error(f"Erro em ticket trend analysis: {str(e)}")
+        return {
+            'query': query,
+            'answer': 'Erro ao analisar tendência do ticket médio.',
+            'interpretation': 'error',
+            'confidence': 0.0,
+            'context': {}
+        }
+
+def analyze_delivery_performance(self, query: str) -> Dict[str, Any]:
+    """
+    Analisa performance de entrega por dia/horário
+    Ex: "Meu tempo de entrega piorou. Em quais dias/horários?"
+    """
+    try:
+        # Análise por dia da semana e horário
+        delivery_query = """
+            SELECT 
+                CASE EXTRACT(DOW FROM created_at)
+                    WHEN 0 THEN 'Domingo'
+                    WHEN 1 THEN 'Segunda'
+                    WHEN 2 THEN 'Terça'
+                    WHEN 3 THEN 'Quarta'
+                    WHEN 4 THEN 'Quinta'
+                    WHEN 5 THEN 'Sexta'
+                    WHEN 6 THEN 'Sábado'
+                END as day_name,
+                CASE 
+                    WHEN EXTRACT(HOUR FROM created_at) < 12 THEN 'Manhã'
+                    WHEN EXTRACT(HOUR FROM created_at) < 18 THEN 'Tarde'
+                    ELSE 'Noite'
+                END as period,
+                COUNT(*) as total_orders,
+                AVG(delivery_time) as avg_delivery_time
+            FROM sales
+            WHERE created_at >= CURRENT_DATE - INTERVAL '30 days'
+            AND delivery_time IS NOT NULL
+            GROUP BY EXTRACT(DOW FROM created_at), 
+                     CASE 
+                        WHEN EXTRACT(HOUR FROM created_at) < 12 THEN 'Manhã'
+                        WHEN EXTRACT(HOUR FROM created_at) < 18 THEN 'Tarde'
+                        ELSE 'Noite'
+                     END
+            ORDER BY avg_delivery_time DESC
+            LIMIT 10
+        """
+        
+        results = self.db.execute(text(delivery_query)).fetchall()
+        
+        if results:
+            answer = "⏱️ **Análise de Tempo de Entrega (últimos 30 dias)**\n\n"
+            answer += "**Períodos com maior tempo de entrega:**\n"
+            
+            critical_periods = []
+            for row in results[:5]:
+                if row[3] and row[3] > 45:  # Mais de 45 minutos
+                    critical_periods.append(row)
+                    answer += f"🔴 {row[0]} - {row[1]}: {row[3]:.0f} min ({row[2]} pedidos)\n"
+                elif row[3] and row[3] > 35:  # Entre 35-45 minutos
+                    answer += f"🟡 {row[0]} - {row[1]}: {row[3]:.0f} min ({row[2]} pedidos)\n"
+                elif row[3]:
+                    answer += f"🟢 {row[0]} - {row[1]}: {row[3]:.0f} min ({row[2]} pedidos)\n"
+            
+            if critical_periods:
+                answer += f"\n⚠️ **Atenção:** {len(critical_periods)} períodos críticos identificados.\n"
+                answer += "**Recomendações:**\n"
+                answer += "• Reforçar equipe de entrega nestes períodos\n"
+                answer += "• Ajustar raio de entrega em horários de pico\n"
+                answer += "• Revisar processos de preparação"
+        else:
+            answer = "Não há dados suficientes de tempo de entrega para análise."
+        
+        return {
+            'query': query,
+            'answer': answer,
+            'interpretation': 'delivery_analysis',
+            'confidence': 0.85,
+            'context': {}
+        }
+        
+    except Exception as e:
+        logger.error(f"Erro em delivery analysis: {str(e)}")
+        # Se não tiver coluna delivery_time, dar resposta alternativa
+        return {
+            'query': query,
+            'answer': 'Os dados de tempo de entrega não estão disponíveis no momento. Verifique se o campo está sendo registrado.',
+            'interpretation': 'delivery_analysis',
+            'confidence': 0.5,
+            'context': {}
+        }
+
+def analyze_customer_retention(self, query: str) -> Dict[str, Any]:
+    """
+    Analisa retenção de clientes
+    Ex: "Quais clientes compraram 3+ vezes mas não voltam há 30 dias?"
+    """
+    try:
+        retention_query = """
+            WITH customer_stats AS (
+                SELECT 
+                    c.id,
+                    c.name,
+                    c.phone,
+                    COUNT(s.id) as total_orders,
+                    MAX(s.created_at) as last_order,
+                    SUM(s.total_amount) as lifetime_value,
+                    AVG(s.total_amount) as avg_ticket
+                FROM customers c
+                JOIN sales s ON c.id = s.customer_id
+                GROUP BY c.id, c.name, c.phone
+                HAVING COUNT(s.id) >= 3
+                AND MAX(s.created_at) < CURRENT_DATE - INTERVAL '30 days'
+            )
+            SELECT 
+                name,
+                phone,
+                total_orders,
+                DATE(last_order) as last_order_date,
+                lifetime_value,
+                avg_ticket,
+                CURRENT_DATE - DATE(last_order) as days_inactive
+            FROM customer_stats
+            ORDER BY lifetime_value DESC
+            LIMIT 20
+        """
+        
+        results = self.db.execute(text(retention_query)).fetchall()
+        
+        if results:
+            answer = "👥 **Clientes Fiéis Inativos (3+ compras, 30+ dias sem comprar)**\n\n"
+            answer += f"Encontrei {len(results)} clientes nesta situação:\n\n"
+            
+            # Top 5 por valor
+            answer += "**Top 5 por valor total gasto:**\n"
+            for i, row in enumerate(results[:5], 1):
+                answer += f"{i}. **{row[0]}**\n"
+                answer += f"   • Pedidos: {row[2]}\n"
+                answer += f"   • Última compra: {row[3]} ({row[6]} dias atrás)\n"
+                answer += f"   • Total gasto: R$ {row[4]:,.2f}\n"
+                answer += f"   • Ticket médio: R$ {row[5]:.2f}\n\n"
+            
+            # Análise e recomendações
+            total_value = sum(r[4] for r in results)
+            answer += f"💰 **Potencial de recuperação:** R$ {total_value:,.2f}\n\n"
+            answer += "📱 **Recomendações:**\n"
+            answer += "• Enviar cupom de desconto personalizado\n"
+            answer += "• Campanha de reativação via WhatsApp\n"
+            answer += "• Oferecer frete grátis no próximo pedido"
+        else:
+            answer = "Ótima notícia! Não há clientes fiéis inativos há mais de 30 dias."
+        
+        return {
+            'query': query,
+            'answer': answer,
+            'interpretation': 'retention_analysis',
+            'confidence': 0.9,
+            'context': {}
+        }
+        
+    except Exception as e:
+        logger.error(f"Erro em retention analysis: {str(e)}")
+        return {
+            'query': query,
+            'answer': 'Erro ao analisar retenção de clientes.',
+            'interpretation': 'error',
+            'confidence': 0.0,
+            'context': {}
+        }
+
+def process_query(self, query: str, context: Dict = None) -> Dict[str, Any]:
+    """
+    Process query principal - VERSÃO AVANÇADA
+    """
+    try:
+        self.db.rollback()
+        query_lower = query.lower()
+        
+        # 1. QUERIES COMPLEXAS DE PRODUTO
+        if ('produto' in query_lower and 
+            any(day in query_lower for day in self.weekdays.keys()) or
+            any(period in query_lower for period in self.day_periods.keys()) or
+            any(channel in query_lower for channel in self.channels.keys())):
+            return self.process_complex_product_query(query)
+        
+        # 2. ANÁLISE DE TICKET MÉDIO
+        elif 'ticket' in query_lower and ('caindo' in query_lower or 'canal' in query_lower or 'loja' in query_lower):
+            return self.analyze_ticket_trend(query)
+        
+        # 3. ANÁLISE DE ENTREGA
+        elif 'entrega' in query_lower and ('pior' in query_lower or 'dia' in query_lower or 'horário' in query_lower):
+            return self.analyze_delivery_performance(query)
+        
+        # 4. ANÁLISE DE RETENÇÃO
+        elif 'cliente' in query_lower and ('voltam' in query_lower or 'inativos' in query_lower or '30 dias' in query_lower):
+            return self.analyze_customer_retention(query)
+        
+        # 5. QUERIES SIMPLES (código anterior)
+        elif any(word in query_lower for word in ['vendi', 'vendeu', 'faturamento']):
+            # ... código anterior para vendas simples ...
+            pass
+            
+        # [Resto do código anterior para queries simples]
+        
+    except Exception as e:
+        self.db.rollback()
+        logger.error(f"Erro no process_query: {str(e)}")
+        return {
+            'query': query,
+            'answer': 'Erro ao processar sua pergunta.',
+            'interpretation': 'error',
+            'confidence': 0.0,
+            'context': {}
+        }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

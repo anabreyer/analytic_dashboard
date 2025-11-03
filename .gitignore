@@ -152,7 +152,6 @@ backend/cython_debug/
 # ============================================
 
 # PostgreSQL
-*.sql
 *.dump
 *.backup
 postgres-data/

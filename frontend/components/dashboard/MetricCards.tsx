@@ -28,15 +28,22 @@ interface MetricCardsProps {
 }
 
 export function MetricCards({ startDate, endDate, storeId, filters = {} }: MetricCardsProps) {
+  // Debug log to track prop changes
+  console.log('🏪 MetricCards render - storeId:', storeId, 'filters:', filters)
+  
   // Build query params with filters
   const buildQueryParams = () => {
     const params: any = {
       start_date: startDate,
-      end_date: endDate,
-      store_id: storeId
+      end_date: endDate
     }
     
-    // Add advanced filters
+    // Only add store_id if it's not null
+    if (storeId !== null && storeId !== undefined) {
+      params.store_id = storeId
+    }
+    
+    // Add advanced filters - send arrays directly, api.ts will handle conversion
     if (filters.dayOfWeek?.length > 0) {
       params.day_of_week = filters.dayOfWeek
     }
@@ -44,10 +51,10 @@ export function MetricCards({ startDate, endDate, storeId, filters = {} }: Metri
       params.time_of_day = filters.timeOfDay
     }
     if (filters.channel?.length > 0) {
-      params.channels = filters.channel
+      params.channels = filters.channel  // Note: channels (plural) to match api.ts
     }
     if (filters.category?.length > 0) {
-      params.categories = filters.category
+      params.categories = filters.category  // Note: categories (plural) to match api.ts
     }
     if (filters.priceRange?.length > 0) {
       params.price_range = filters.priceRange
@@ -55,15 +62,32 @@ export function MetricCards({ startDate, endDate, storeId, filters = {} }: Metri
     if (filters.customerType?.length > 0) {
       params.customer_type = filters.customerType
     }
+    if (filters.deliveryZone?.length > 0) {
+      params.delivery_zone = filters.deliveryZone
+    }
+    if (filters.orderSize?.length > 0) {
+      params.order_size = filters.orderSize
+    }
+    
+    // Debug log
+    console.log('📊 MetricCards - Building params with storeId:', storeId)
+    console.log('📊 MetricCards - Query params:', params)
     
     return params
   }
 
   // Fetch overview data with filters
   const { data, isLoading, error } = useQuery({
-    queryKey: ['overview', startDate, endDate, storeId, filters],
+    queryKey: [
+      'overview', 
+      startDate?.toISOString(), 
+      endDate?.toISOString(), 
+      storeId, 
+      JSON.stringify(filters)
+    ],
     queryFn: () => analyticsAPI.getOverview(buildQueryParams()),
     refetchInterval: 60000, // Refresh every minute
+    staleTime: 30000, // Consider data stale after 30 seconds
   })
 
   // Check if filters are active

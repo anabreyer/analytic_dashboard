@@ -165,35 +165,49 @@ const buildFilterParams = (params: any) => {
   // Basic params
   if (params.start_date) queryParams.start_date = format(params.start_date, 'yyyy-MM-dd')
   if (params.end_date) queryParams.end_date = format(params.end_date, 'yyyy-MM-dd')
-  if (params.store_id) queryParams.store_id = params.store_id
+  
+  // Store ID - only add if not null/undefined
+  if (params.store_id !== null && params.store_id !== undefined) {
+    queryParams.store_id = params.store_id
+  }
+  
   if (params.granularity) queryParams.granularity = params.granularity
   if (params.limit) queryParams.limit = params.limit
   
-  // Advanced filter params - convert arrays to comma-separated strings
-  if (params.day_of_week?.length > 0) {
-    queryParams.day_of_week = params.day_of_week.join(',')
+  // Advanced filter params - handle both arrays and strings
+  const handleFilterParam = (paramValue: any): string | undefined => {
+    if (!paramValue) return undefined
+    if (typeof paramValue === 'string') return paramValue // Already a string
+    if (Array.isArray(paramValue) && paramValue.length > 0) return paramValue.join(',')
+    return undefined
   }
-  if (params.time_of_day?.length > 0) {
-    queryParams.time_of_day = params.time_of_day.join(',')
-  }
-  if (params.channels?.length > 0) {
-    queryParams.channels = params.channels.join(',')
-  }
-  if (params.categories?.length > 0) {
-    queryParams.categories = params.categories.join(',')
-  }
-  if (params.price_range?.length > 0) {
-    queryParams.price_range = params.price_range.join(',')
-  }
-  if (params.customer_type?.length > 0) {
-    queryParams.customer_type = params.customer_type.join(',')
-  }
-  if (params.delivery_zone?.length > 0) {
-    queryParams.delivery_zone = params.delivery_zone.join(',')
-  }
-  if (params.order_size?.length > 0) {
-    queryParams.order_size = params.order_size.join(',')
-  }
+  
+  const dayOfWeek = handleFilterParam(params.day_of_week)
+  if (dayOfWeek) queryParams.day_of_week = dayOfWeek
+  
+  const timeOfDay = handleFilterParam(params.time_of_day)
+  if (timeOfDay) queryParams.time_of_day = timeOfDay
+  
+  const channels = handleFilterParam(params.channels)
+  if (channels) queryParams.channels = channels
+  
+  const categories = handleFilterParam(params.categories)
+  if (categories) queryParams.categories = categories
+  
+  const priceRange = handleFilterParam(params.price_range)
+  if (priceRange) queryParams.price_range = priceRange
+  
+  const customerType = handleFilterParam(params.customer_type)
+  if (customerType) queryParams.customer_type = customerType
+  
+  const deliveryZone = handleFilterParam(params.delivery_zone)
+  if (deliveryZone) queryParams.delivery_zone = deliveryZone
+  
+  const orderSize = handleFilterParam(params.order_size)
+  if (orderSize) queryParams.order_size = orderSize
+  
+  console.log('🔧 buildFilterParams - Input:', params)
+  console.log('🔧 buildFilterParams - Output:', queryParams)
   
   return queryParams
 }

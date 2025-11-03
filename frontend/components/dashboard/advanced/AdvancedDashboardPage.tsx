@@ -18,7 +18,6 @@ import { MetricCards } from '@/components/dashboard/MetricCards'
 import { SalesChart } from '@/components/dashboard/SalesChart'
 import { TopProducts } from '@/components/dashboard/TopProducts'
 import { ChannelsTable } from '@/components/dashboard/ChannelsTable'
-import { InsightsPanel } from '@/components/dashboard/InsightsPanel'
 import { DateRangePicker } from '@/components/filters/DateRangePicker'
 import { StoreSelector } from '@/components/filters/StoreSelector'
 import { NaturalLanguageSearch } from '@/components/dashboard/NaturalLanguageSearch'
@@ -247,6 +246,7 @@ export default function AdvancedDashboardPage() {
             <Tab icon={Grid}>
               Dashboard Custom
             </Tab>
+            {/* TODO: Uncomment when components are implemented
             <Tab icon={TrendingUp}>
               Comparativo
             </Tab>
@@ -256,6 +256,7 @@ export default function AdvancedDashboardPage() {
             <Tab icon={Users}>
               Jornada Cliente
             </Tab>
+            */}
           </TabList>
 
           <TabPanels>
@@ -369,7 +370,9 @@ export default function AdvancedDashboardPage() {
             />
           </TabPanel>
 
+          {/* TODO: Uncomment when components are implemented
           {/* Comparative Analysis Tab */}
+          {/*
           <TabPanel className="mt-6">
             <ComparativeDashboard
               dateRange={dateRange}
@@ -379,6 +382,7 @@ export default function AdvancedDashboardPage() {
           </TabPanel>
 
           {/* Predictive Analytics Tab */}
+          {/*
           <TabPanel className="mt-6">
             <PredictiveAnalytics
               dateRange={dateRange}
@@ -387,12 +391,14 @@ export default function AdvancedDashboardPage() {
           </TabPanel>
 
           {/* Customer Journey Tab */}
+          {/*
           <TabPanel className="mt-6">
             <CustomerJourney
               dateRange={dateRange}
               storeId={selectedStore}
             />
           </TabPanel>
+          */}
           </TabPanels>
         </TabGroup>
       </div>

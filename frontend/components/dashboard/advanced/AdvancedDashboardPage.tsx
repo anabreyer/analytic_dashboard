@@ -7,7 +7,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Tabs, TabsList, TabsPanel, TabsTrigger } from '@tremor/react'
+import { TabGroup, TabList, Tab, TabPanels, TabPanel } from '@tremor/react'
 import { 
   LayoutDashboard, Brain, Filter, Grid, Settings, 
   TrendingUp, Users, Share2, Download, Package 
@@ -34,7 +34,7 @@ import { CustomerJourney } from '@/components/analytics/CustomerJourney'
 import { ProductTimelineChart } from '@/components/dashboard/ProductTimelineChart'
 
 export default function AdvancedDashboardPage() {
-  const [activeTab, setActiveTab] = useState('overview')
+  const [activeTabIndex, setActiveTabIndex] = useState(0)
   const [dateRange, setDateRange] = useState<{ start: Date | null; end: Date | null }>({
     start: null,
     end: null,
@@ -154,34 +154,34 @@ export default function AdvancedDashboardPage() {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList>
-            <TabsTrigger value="overview" icon={LayoutDashboard}>
+        <TabGroup index={activeTabIndex} onIndexChange={setActiveTabIndex}>
+          <TabList>
+            <Tab icon={LayoutDashboard}>
               Visão Geral
-            </TabsTrigger>
+            </Tab>
             
             {/* NOVA TAB DE ANÁLISE DE PRODUTO */}
-            <TabsTrigger value="product-analysis" icon={Package}>
+            <Tab icon={Package}>
               Análise de Produto
-            </TabsTrigger>
+            </Tab>
             
-            </TabsTrigger>
-            <TabsTrigger value="custom" icon={Grid}>
+            <Tab icon={Grid}>
               Dashboard Custom
-            </TabsTrigger>
-            <TabsTrigger value="comparative" icon={TrendingUp}>
+            </Tab>
+            <Tab icon={TrendingUp}>
               Comparativo
-            </TabsTrigger>
-            <TabsTrigger value="predictive" icon={TrendingUp}>
+            </Tab>
+            <Tab icon={TrendingUp}>
               Preditivo
-            </TabsTrigger>
-            <TabsTrigger value="customers" icon={Users}>
+            </Tab>
+            <Tab icon={Users}>
               Jornada Cliente
-            </TabsTrigger>
-          </TabsList>
+            </Tab>
+          </TabList>
 
+          <TabPanels>
           {/* Overview Tab */}
-          <TabsPanel value="overview" className="mt-6 space-y-6">
+          <TabPanel className="mt-6 space-y-6">
             {/* Basic Filters */}
             <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
               <div className="flex flex-col sm:flex-row gap-4">
@@ -238,10 +238,10 @@ export default function AdvancedDashboardPage() {
               startDate={dateRange.start}
               endDate={dateRange.end}
             />
-          </TabsPanel>
+          </TabPanel>
 
           {/* NOVO TAB PANEL - Product Analysis Tab */}
-          <TabsPanel value="product-analysis" className="mt-6 space-y-6">
+          <TabPanel className="mt-6 space-y-6">
             {/* Filters for Product Analysis */}
             <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
               <div className="flex flex-col sm:flex-row gap-4">
@@ -275,11 +275,11 @@ export default function AdvancedDashboardPage() {
               storeId={selectedStore}
               filters={advancedFilters}
             />
-          </TabsPanel>
+          </TabPanel>
 
 
           {/* Custom Dashboard Tab */}
-          <TabsPanel value="custom" className="mt-6">
+          <TabPanel className="mt-6">
             <DashboardBuilder
               initialWidgets={getCurrentTemplate().widgets}
               onSave={(widgets) => {
@@ -288,33 +288,34 @@ export default function AdvancedDashboardPage() {
               }}
               templates={dashboardTemplates}
             />
-          </TabsPanel>
+          </TabPanel>
 
           {/* Comparative Analysis Tab */}
-          <TabsPanel value="comparative" className="mt-6">
+          <TabPanel className="mt-6">
             <ComparativeDashboard
               dateRange={dateRange}
               storeId={selectedStore}
               filters={advancedFilters}
             />
-          </TabsPanel>
+          </TabPanel>
 
           {/* Predictive Analytics Tab */}
-          <TabsPanel value="predictive" className="mt-6">
+          <TabPanel className="mt-6">
             <PredictiveAnalytics
               dateRange={dateRange}
               storeId={selectedStore}
             />
-          </TabsPanel>
+          </TabPanel>
 
           {/* Customer Journey Tab */}
-          <TabsPanel value="customers" className="mt-6">
+          <TabPanel className="mt-6">
             <CustomerJourney
               dateRange={dateRange}
               storeId={selectedStore}
             />
-          </TabsPanel>
-        </Tabs>
+          </TabPanel>
+          </TabPanels>
+        </TabGroup>
       </div>
     </div>
   )

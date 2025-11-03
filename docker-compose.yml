@@ -1,13 +1,23 @@
+# ============================================
+# DOCKER COMPOSE - NOLA ANALYTICS
+# Complete Stack Setup
+# ============================================
+
 version: '3.8'
 
 services:
+  # ==========================================
+  # DATABASE - PostgreSQL
+  # ==========================================
   postgres:
-    image: postgres:15
-    container_name: godlevel-db
+    image: postgres:15-alpine
+    container_name: nola-postgres
+    restart: unless-stopped
     environment:
       POSTGRES_DB: challenge_db
       POSTGRES_USER: challenge
       POSTGRES_PASSWORD: challenge_2024
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8"
     ports:
       - "5432:5432"
     volumes:
@@ -18,42 +28,158 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - nola-network
 
+  # ==========================================
+  # CACHE - Redis
+  # ==========================================
+  redis:
+    image: redis:7-alpine
+    container_name: nola-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - nola-network
+
+  # ==========================================
+  # DATA GENERATOR (Optional - Run Once)
+  # ==========================================
   data-generator:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: godlevel-data-gen
+    container_name: nola-data-generator
     depends_on:
       postgres:
         condition: service_healthy
     environment:
       DATABASE_URL: postgresql://challenge:challenge_2024@postgres:5432/challenge_db
-    command: >
-      sh -c "
-        echo 'Waiting for database to be ready...' &&
-        sleep 5 &&
-        echo 'Generating challenge data...' &&
-        python generate_data.py --db-url postgresql://challenge:challenge_2024@postgres:5432/challenge_db
-      "
+    command: python generate_data.py --db-url postgresql://challenge:challenge_2024@postgres:5432/challenge_db
+    networks:
+      - nola-network
     profiles:
       - tools
 
+  # ==========================================
+  # BACKEND - FastAPI
+  # ==========================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: nola-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      # Database
+      DATABASE_URL: postgresql://challenge:challenge_2024@postgres:5432/challenge_db
+      
+      # Redis
+      REDIS_URL: redis://redis:6379
+      
+      # API Configuration
+      API_V1_STR: /api/v1
+      PROJECT_NAME: Nola Analytics
+      VERSION: 1.0.0
+      DEBUG: "true"
+      
+      # CORS
+      CORS_ORIGINS: http://localhost:3000,http://localhost:3001,http://frontend:3000
+      
+      # Performance
+      DB_POOL_SIZE: 20
+      DB_MAX_OVERFLOW: 40
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - /app/__pycache__
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - nola-network
+
+  # ==========================================
+  # FRONTEND - Next.js
+  # ==========================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: nola-frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000/api/v1
+      NODE_ENV: production
+    ports:
+      - "3000:3000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - nola-network
+
+  # ==========================================
+  # PGADMIN (Optional - Database Management)
+  # ==========================================
   pgadmin:
     image: dpage/pgadmin4:latest
-    container_name: godlevel-pgadmin
+    container_name: nola-pgadmin
+    restart: unless-stopped
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@godlevel.com
+      PGADMIN_DEFAULT_EMAIL: admin@nola.com
       PGADMIN_DEFAULT_PASSWORD: admin
       PGADMIN_CONFIG_SERVER_MODE: 'False'
     ports:
       - "5050:80"
     depends_on:
       - postgres
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - nola-network
     profiles:
       - tools
 
+# ==========================================
+# NETWORKS
+# ==========================================
+networks:
+  nola-network:
+    driver: bridge
+    name: nola-network
+
+# ==========================================
+# VOLUMES (Persistent Data)
+# ==========================================
 volumes:
   postgres_data:
     driver: local
-
+  redis_data:
+    driver: local
+  pgadmin_data:
+    driver: local

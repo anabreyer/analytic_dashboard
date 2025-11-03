@@ -3,8 +3,6 @@
 # Complete Stack Setup
 # ============================================
 
-version: '3.8'
-
 services:
   # ==========================================
   # DATABASE - PostgreSQL
@@ -108,12 +106,6 @@ services:
     volumes:
       - ./backend:/app
       - /app/__pycache__
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 60s
     networks:
       - nola-network
 
@@ -127,8 +119,7 @@ services:
     container_name: nola-frontend
     restart: unless-stopped
     depends_on:
-      backend:
-        condition: service_healthy
+      - backend
     environment:
       NEXT_PUBLIC_API_URL: http://localhost:8000/api/v1
       NODE_ENV: production

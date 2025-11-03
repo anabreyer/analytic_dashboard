@@ -161,5 +161,6 @@ export function getDateRangeLabel(start: Date | null, end: Date | null): string 
   if (!start && !end) return 'Últimos 30 dias'
   if (start && !end) return `Desde ${formatDate(start)}`
   if (!start && end) return `Até ${formatDate(end)}`
-  return `${formatDate(start)} - ${formatDate(end)}`
+  if (start && end) return `${formatDate(start)} - ${formatDate(end)}`
+  return 'Últimos 30 dias'
 }

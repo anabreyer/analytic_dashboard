@@ -26,9 +26,6 @@ import { NaturalLanguageSearch } from '@/components/dashboard/NaturalLanguageSea
 // Import new advanced components
 import { MultiDimensionalFilter } from '@/components/filters/MultiDimensionalFilter'
 import { DashboardBuilder } from '@/components/dashboard/DashboardBuilder'
-import { ComparativeDashboard } from '@/components/analytics/ComparativeDashboard'
-import { PredictiveAnalytics } from '@/components/analytics/PredictiveAnalytics'
-import { CustomerJourney } from '@/components/analytics/CustomerJourney'
 
 // NOVO IMPORT DO PRODUCT TIMELINE
 import { ProductTimelineChart } from '@/components/dashboard/ProductTimelineChart'

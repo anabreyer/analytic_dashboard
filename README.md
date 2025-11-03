@@ -50,24 +50,18 @@ Restaurantes geram toneladas de dados mas lutam para transformá-los em decisõe
 ### 🎛️ Dashboard Interativo
 - **Métricas em tempo real**: Pedidos, faturamento, ticket médio, clientes únicos
 - **Comparação de períodos**: Analise variações vs período anterior
-- **Filtros multidimensionais**: 8+ dimensões de filtro (dia da semana, horário, canal, categoria)
+- **Filtros multidimensionais**: 3 dimensões de filtro 
 - **Visualizações avançadas**: Charts interativos com granularidade ajustável
 
 ### 🤖 Inteligência Artificial
 - **Natural Language Queries**: "Quanto vendi ontem no iFood?"
-- **Insights Automáticos**: Alertas proativos sobre problemas e oportunidades
-- **Análise Preditiva**: Previsões de demanda e tendências
-- **Recomendações Acionáveis**: Cada insight vem com ação sugerida
 
 ### 📊 Analytics Avançado
 - **Análise de Produtos**: Timeline de vendas por produto
 - **Performance de Canais**: Comparação detalhada entre canais
-- **Jornada do Cliente**: Análise de funil e comportamento
-- **Comparativos**: Múltiplas dimensões de comparação
 
 ### 🎨 Dashboard Builder
 - **Drag & Drop**: Construa dashboards personalizados
-- **Templates por Perfil**: Proprietário, Gerente, Marketing, Operações
 - **Widgets Customizáveis**: Diversos tipos de visualização
 - **Salvar/Carregar**: Persistência de configurações
 
@@ -75,9 +69,6 @@ Restaurantes geram toneladas de dados mas lutam para transformá-los em decisõe
 - **Dia da Semana**: Segunda a Domingo
 - **Período do Dia**: Manhã, Tarde, Noite, Madrugada
 - **Canais**: iFood, Rappi, Uber Eats, WhatsApp, Presencial
-- **Categorias**: Hambúrgueres, Pizzas, Bebidas, Sobremesas
-- **Tipo de Cliente**: Novos, Recorrentes, VIP
-- **Salvar Filtros**: Crie presets de filtros
 
 ---
 
@@ -397,21 +388,7 @@ Todos os endpoints aceitam os seguintes parâmetros:
 
 ### Vídeo
 
-📹 **[Assista ao vídeo de demonstração](link-do-video)**
-
-### Screenshots
-
-#### Dashboard Principal
-![Dashboard](./screenshots/dashboard.png)
-
-#### Filtros Multidimensionais
-![Filters](./screenshots/filters.png)
-
-#### Product Timeline
-![Product Timeline](./screenshots/product-timeline.png)
-
-#### Insights Automáticos
-![Insights](./screenshots/insights.png)
+📹 **[Assista ao vídeo de demonstração](https://youtu.be/VOCrgNWjoKE)**
 
 ---
 
@@ -502,8 +479,8 @@ Este projeto é licenciado sob a licença MIT.
 ## 👤 Autor
 
 **Seu Nome**
-- GitHub: [@seu-usuario](https://github.com/seu-usuario)
-- LinkedIn: [seu-perfil](https://linkedin.com/in/seu-perfil)
+- GitHub: [@anabreyer](https://github.com/anabreyer)
+- LinkedIn: [Ana Breyer](https://linkedin.com/in/ana-breyer)
 
 ---
 

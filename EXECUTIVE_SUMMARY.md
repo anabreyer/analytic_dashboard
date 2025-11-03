@@ -18,15 +18,10 @@
 ✅ Suporte a Dark Mode  
 
 ### 2. Filtros Multidimensionais (⭐ Destaque)
-✅ 8 dimensões de filtro:
+✅ 3 dimensões de filtro:
 - Dia da semana
 - Período do dia
 - Canal de venda
-- Categoria de produto
-- Faixa de preço
-- Tipo de cliente
-- Zona de entrega
-- Tamanho do pedido
 
 ✅ Salvar/Carregar presets de filtros  
 ✅ Feedback visual constante
@@ -43,18 +38,12 @@
 ✅ Métricas por produto (quantidade, receita, preço médio)  
 ✅ Identificação de sazonalidade
 
-### 5. Insights Automáticos
-✅ Geração automática de alertas  
-✅ 3 tipos: Warning, Success, Info  
-✅ Priorização (high/medium/low)  
-✅ Ações recomendadas
-
-### 6. Dashboard Builder
+### 5. Dashboard Builder
 ✅ Drag-and-drop de widgets  
 ✅ Templates por perfil (Owner, Manager, Marketing)  
 ✅ Salvamento de layouts personalizados
 
-### 7. Performance de Canais
+### 6. Performance de Canais
 ✅ Comparação entre canais  
 ✅ Market share visual  
 ✅ Métricas: pedidos, receita, tempo de entrega, cancelamento
@@ -224,12 +213,7 @@ Sistema de cache em múltiplas camadas com TTLs diferenciados por criticidade do
 
 **Impacto**: 80% menos queries ao banco, response time < 500ms.
 
-### 4. Insights Automáticos (⭐⭐)
-Engine de regras que gera insights proativos sobre o negócio.
-
-**Impacto**: Usuários não precisam procurar problemas, o sistema alerta automaticamente.
-
-### 5. Type Safety End-to-End (⭐⭐)
+### 4. Type Safety End-to-End (⭐⭐)
 Pydantic no backend + TypeScript no frontend = contratos de API type-safe.
 
 **Impacto**: Menos bugs em produção, refactoring mais seguro.
@@ -260,7 +244,7 @@ Pydantic no backend + TypeScript no frontend = contratos de API type-safe.
 
 ## 🎬 Demo
 
-📹 **[Link do vídeo de demonstração](link-aqui)**
+📹 **[Link do vídeo de demonstração](https://youtu.be/VOCrgNWjoKE)**
 
 Duração: 8 minutos  
 Conteúdo:
@@ -329,10 +313,10 @@ Conteúdo:
 
 ## 📞 Contato
 
-**Nome:** [Seu Nome]  
-**Email:** [seu@email.com]  
-**LinkedIn:** [linkedin.com/in/seu-perfil]  
-**GitHub:** [github.com/seu-usuario]  
+**Nome:** [Ana Breyer]  
+**Email:** [breyerana@gmail.com]  
+**LinkedIn:** [linkedin.com/in/ana-breyer]  
+**GitHub:** [github.com/anabreyer]  
 
 ---
 

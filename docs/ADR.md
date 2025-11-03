@@ -667,18 +667,6 @@ cache.delete(f"overview:*")  # Wildcard pattern
 2. **Canal**
    - iFood, Rappi, Uber Eats, WhatsApp, Presencial
 
-3. **Produto**
-   - Categorias (burgers, pizza, drinks, desserts)
-   - Faixa de preço (low, medium, high)
-
-4. **Cliente**
-   - Tipo (new, returning, vip, inactive)
-   - Tamanho do pedido (small, medium, large)
-
-5. **Geográfico**
-   - Zona de entrega
-   - Loja
-
 ---
 
 ### 7.2 Filter Implementation
@@ -814,45 +802,7 @@ async def natural_query(query: NaturalQueryRequest):
 
 ---
 
-### 8.3 Insights Automáticos
-
-**Decisão:** Sistema de regras para gerar insights.
-
-```python
-def generate_insights(data: AnalyticsData) -> List[Insight]:
-    insights = []
-    
-    # Regra 1: Queda de vendas
-    if data.current_orders < data.previous_orders * 0.8:
-        insights.append(Insight(
-            type="warning",
-            priority="high",
-            title="Queda significativa de pedidos",
-            description=f"Pedidos caíram {decline}% vs período anterior",
-            action="Revisar estratégia de marketing e promoções"
-        ))
-    
-    # Regra 2: Horário de pico
-    peak_hour = find_peak_hour(data)
-    insights.append(Insight(
-        type="info",
-        priority="medium",
-        title=f"Horário de pico: {peak_hour}h",
-        description=f"70% dos pedidos entre {peak_hour-1}h e {peak_hour+1}h",
-        action="Alocar mais staff neste horário"
-    ))
-    
-    return insights
-```
-
-**Tipos de Insights:**
-- **Warnings**: Problemas que precisam atenção
-- **Success**: Oportunidades e wins
-- **Info**: Informações úteis
-
----
-
-### 8.4 Dashboard Builder
+### 8.3 Dashboard Builder
 
 **Decisão:** React DnD para drag-and-drop.
 

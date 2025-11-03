@@ -1,4 +1,16 @@
 /**
+ * UI Components Index
+ * Consolidated UI components with proper client-side rendering
+ */
+
+'use client'
+
+import React, { useState } from 'react'
+import { Button, Card, Title, Text } from '@tremor/react'
+import { RefreshCw, AlertTriangle } from 'lucide-react'
+import { useQueryClient } from '@tanstack/react-query'
+
+/**
  * LoadingSpinner Component
  * Simple loading spinner animation
  */
@@ -34,13 +46,6 @@ export function LoadingCard() {
  * Manual refresh button for data
  */
 
-'use client'
-
-import { Button } from '@tremor/react'
-import { RefreshCw } from 'lucide-react'
-import { useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
-
 export function RefreshButton() {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const queryClient = useQueryClient()
@@ -68,12 +73,6 @@ export function RefreshButton() {
  * ErrorBoundary Component
  * Catches and displays errors gracefully
  */
-
-'use client'
-
-import React from 'react'
-import { Card, Title, Text, Button } from '@tremor/react'
-import { AlertTriangle, RefreshCw } from 'lucide-react'
 
 interface ErrorBoundaryState {
   hasError: boolean

@@ -439,6 +439,13 @@ if (widget.type === 'table') {
               </optgroup>
             </select>
             
+            {/* Info de debug - pode remover depois */}
+            <div className="mt-2 p-2 bg-gray-100 rounded text-xs">
+              <Text className="text-gray-600">Debug Info:</Text>
+              <Text className="text-gray-600">Fonte: {localConfig.dataSource}</Text>
+              <Text className="text-gray-600">Dimensão: {localConfig.dimension || 'nenhuma'}</Text>
+              <Text className="text-gray-600">Métrica: {localConfig.metric}</Text>
+            </div>
           </div>
 
           {/* Limite de linhas */}
@@ -800,10 +807,7 @@ function WidgetWithData({
     },
     enabled: !!widget.config.dataSource,
     refetchInterval: 60000, // Atualizar a cada 60 segundos
-    retry: 1,
-    onError: (error) => {
-      console.error('Query error:', error)
-    }
+    retry: 1
   })
 
   // Handle dragging

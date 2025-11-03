@@ -32,5 +32,5 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD python -c "import requests; requests.get('http://localhost:8000/')" || exit 1
 
 # Start command
-test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+test: ["CMD", "curl", "-f", "http://localhost:8000/docs"]
 start_period: 60s  

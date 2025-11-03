@@ -264,6 +264,7 @@ async def get_channels(
     # Parâmetros básicos
     start_date: Optional[date] = Query(None),
     end_date: Optional[date] = Query(None),
+    store_id: Optional[int] = Query(None),
     
     # FILTROS AVANÇADOS
     channels: Optional[str] = Query(None),
@@ -286,7 +287,7 @@ async def get_channels(
         }
         
         service = AnalyticsService(db)
-        result = service.get_channels_performance(start_date, end_date, filters=filters)
+        result = service.get_channels_performance(start_date, end_date, store_id, filters=filters)
         
         return result
         

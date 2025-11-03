@@ -298,14 +298,15 @@ class AnalyticsService:
             logger.error(f"Erro em get_top_products: {str(e)}")
             return {'products': []}
     
-    def get_channels_performance(self, start_date, end_date, filters=None):
-        """Channels com dados REAIS"""
+    def get_channels_performance(self, start_date, end_date, store_id=None, filters=None):
+        """Channels com dados REAIS e filtros aplicados"""
         try:
             if not end_date:
                 end_date = date.today()
             if not start_date:
                 start_date = end_date - timedelta(days=30)
             
+            # Base query
             query = """
                 SELECT 
                     c.name as channel_name,
@@ -317,15 +318,71 @@ class AnalyticsService:
                 INNER JOIN channels c ON s.channel_id = c.id
                 WHERE s.created_at >= :start_date 
                 AND s.created_at <= :end_date
+            """
+            
+            # Aplicar filtro de store_id
+            if store_id:
+                query += " AND s.store_id = :store_id"
+            
+            # Aplicar filtro de canais específicos
+            if filters and filters.get('channels'):
+                # Este filtro é para FILTRAR os canais mostrados
+                channel_names = []
+                for channel in filters['channels']:
+                    if channel.lower() == 'ifood':
+                        channel_names.append("'iFood%'")
+                    elif channel.lower() == 'rappi':
+                        channel_names.append("'Rappi%'")
+                    elif channel.lower() == 'uber':
+                        channel_names.append("'Uber%'")
+                    elif channel.lower() == 'whatsapp':
+                        channel_names.append("'WhatsApp%'")
+                    elif channel.lower() == 'presencial':
+                        channel_names.append("'Presencial%'")
+                    elif channel.lower() == 'app':
+                        channel_names.append("'App%'")
+                
+                if channel_names:
+                    query += f" AND (c.name LIKE {' OR c.name LIKE '.join(channel_names)})"
+            
+            # Aplicar filtro de dia da semana
+            if filters and filters.get('day_of_week'):
+                day_mapping = {
+                    'mon': 1, 'tue': 2, 'wed': 3, 'thu': 4,
+                    'fri': 5, 'sat': 6, 'sun': 0
+                }
+                days = [str(day_mapping.get(d, -1)) for d in filters['day_of_week']]
+                if days:
+                    query += f" AND EXTRACT(DOW FROM s.created_at) IN ({','.join(days)})"
+            
+            # Aplicar filtro de período do dia
+            if filters and filters.get('time_of_day'):
+                time_conditions = []
+                for period in filters['time_of_day']:
+                    if period == 'morning':
+                        time_conditions.append("EXTRACT(HOUR FROM s.created_at) BETWEEN 6 AND 11")
+                    elif period == 'afternoon':
+                        time_conditions.append("EXTRACT(HOUR FROM s.created_at) BETWEEN 12 AND 17")
+                    elif period == 'evening':
+                        time_conditions.append("EXTRACT(HOUR FROM s.created_at) BETWEEN 18 AND 22")
+                    elif period == 'night':
+                        time_conditions.append("(EXTRACT(HOUR FROM s.created_at) >= 23 OR EXTRACT(HOUR FROM s.created_at) < 6)")
+                
+                if time_conditions:
+                    query += f" AND ({' OR '.join(time_conditions)})"
+            
+            query += """
                 GROUP BY c.name, c.type
                 HAVING COUNT(s.id) > 0
                 ORDER BY revenue DESC
             """
             
-            results = self.db.execute(
-                text(query),
-                {'start_date': start_date, 'end_date': end_date}
-            ).fetchall()
+            # Preparar parâmetros
+            params = {'start_date': start_date, 'end_date': end_date}
+            if store_id:
+                params['store_id'] = store_id
+            
+            results = self.db.execute(text(query), params).fetchall()
             
             channels = []
             for r in results:

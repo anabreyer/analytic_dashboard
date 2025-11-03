@@ -477,7 +477,7 @@ export default function DashboardPage() {
           <ChannelsTable
             startDate={dateRange.start}
             endDate={dateRange.end}
-            // @ts-ignore - Add filters prop
+            storeId={selectedStore}
             filters={advancedFilters}
           />
         </div>

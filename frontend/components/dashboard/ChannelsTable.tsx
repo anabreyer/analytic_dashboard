@@ -26,15 +26,19 @@ import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 interface ChannelsTableProps {
   startDate: Date | null
   endDate: Date | null
+  storeId?: number | null
+  filters?: Record<string, any>
 }
 
-export function ChannelsTable({ startDate, endDate }: ChannelsTableProps) {
+export function ChannelsTable({ startDate, endDate, storeId, filters }: ChannelsTableProps) {
   // Fetch channels data
   const { data, isLoading, error } = useQuery({
-    queryKey: ['channels', startDate, endDate],
+    queryKey: ['channels', startDate, endDate, storeId, filters],
     queryFn: () => analyticsAPI.getChannels({
       start_date: startDate,
-      end_date: endDate
+      end_date: endDate,
+      store_id: storeId,
+      ...filters
     }),
   })
 

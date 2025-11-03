@@ -231,12 +231,19 @@ function WidgetConfigPanel({
 // Configuração simplificada para tabelas
 if (widget.type === 'table') {
   // Estado local para controlar o formulário
-  const [localConfig, setLocalConfig] = useState({
-    dataSource: config.dataSource || 'sales',
+  const [localConfig, setLocalConfig] = useState<{
+    dataSource: DataSource
+    dimension: string
+    metric: string
+    limit: number
+    sortBy: 'asc' | 'desc'
+    dateRange: { start: Date | null; end: Date | null }
+  }>({
+    dataSource: (config.dataSource || 'sales') as DataSource,
     dimension: config.dimension || 'channel_name',
     metric: config.metric || 'total_amount',
     limit: config.limit || 10,
-    sortBy: config.sortBy || 'desc',
+    sortBy: (config.sortBy || 'desc') as 'asc' | 'desc',
     dateRange: config.dateRange || { start: null, end: null }
   })
 
@@ -253,7 +260,7 @@ if (widget.type === 'table') {
     setTableOption(value)
     
     // Parse do valor selecionado
-    let source = ''
+    let source: DataSource = 'sales'
     let dim = ''
     let metric = ''
     
@@ -337,12 +344,12 @@ if (widget.type === 'table') {
     console.log('Salvando configuração da tabela:', localConfig)
     
     // Criar nova configuração completa
-    const newConfig = {
+    const newConfig: WidgetConfig = {
       ...config, // Manter outras configurações
       ...localConfig, // Aplicar mudanças locais
       showLegend: config.showLegend,
       showAnimation: config.showAnimation,
-      aggregation: localConfig.metric === 'count' ? 'count' : 'sum'
+      aggregation: (localConfig.metric === 'count' ? 'count' : 'sum') as AggregationType
     }
     
     console.log('Nova configuração completa:', newConfig)
@@ -432,13 +439,6 @@ if (widget.type === 'table') {
               </optgroup>
             </select>
             
-            {/* Info de debug - pode remover depois */}
-            <div className="mt-2 p-2 bg-gray-100 rounded text-xs">
-              <Text className="text-gray-600">Debug Info:</Text>
-              <Text className="text-gray-600">Fonte: {localConfig.dataSource}</Text>
-              <Text className="text-gray-600">Dimensão: {localConfig.dimension || 'nenhuma'}</Text>
-              <Text className="text-gray-600">Métrica: {localConfig.metric}</Text>
-            </div>
           </div>
 
           {/* Limite de linhas */}

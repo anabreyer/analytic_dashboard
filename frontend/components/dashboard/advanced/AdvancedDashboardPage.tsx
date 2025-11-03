@@ -26,9 +26,9 @@ import { NaturalLanguageSearch } from '@/components/dashboard/NaturalLanguageSea
 // Import new advanced components
 import { MultiDimensionalFilter } from '@/components/filters/MultiDimensionalFilter'
 import { DashboardBuilder } from '@/components/dashboard/DashboardBuilder'
-// import { ComparativeDashboard } from '@/components/analytics/ComparativeDashboard'
-// import { PredictiveAnalytics } from '@/components/analytics/PredictiveAnalytics'
-// import { CustomerJourney } from '@/components/analytics/CustomerJourney'
+import { ComparativeDashboard } from '@/components/analytics/ComparativeDashboard'
+import { PredictiveAnalytics } from '@/components/analytics/PredictiveAnalytics'
+import { CustomerJourney } from '@/components/analytics/CustomerJourney'
 
 // NOVO IMPORT DO PRODUCT TIMELINE
 import { ProductTimelineChart } from '@/components/dashboard/ProductTimelineChart'
@@ -50,10 +50,52 @@ export default function AdvancedDashboardPage() {
       name: 'Visão do Proprietário',
       description: 'Foco em métricas financeiras e crescimento',
       widgets: [
-        { id: '1', type: 'metric-card' as const, title: 'Faturamento Total', config: {}, position: { x: 20, y: 20 }, size: { width: 300, height: 150 } },
-        { id: '2', type: 'line-chart' as const, title: 'Evolução de Vendas', config: {}, position: { x: 340, y: 20 }, size: { width: 600, height: 350 } },
-        { id: '3', type: 'insights' as const, title: 'Insights Estratégicos', config: {}, position: { x: 20, y: 190 }, size: { width: 300, height: 400 } },
-        { id: '4', type: 'pie-chart' as const, title: 'Mix de Canais', config: {}, position: { x: 960, y: 20 }, size: { width: 350, height: 350 } },
+        { 
+          id: '1', 
+          type: 'metric-card' as const, 
+          title: 'Faturamento Total', 
+          config: {
+            dataSource: 'sales' as const,
+            metric: 'total_amount',
+            aggregation: 'sum' as const,
+            showLegend: true,
+            showAnimation: true
+          }, 
+          position: { x: 20, y: 20 }, 
+          size: { width: 300, height: 150 } 
+        },
+        { 
+          id: '2', 
+          type: 'line-chart' as const, 
+          title: 'Evolução de Vendas', 
+          config: {
+            dataSource: 'sales' as const,
+            metric: 'total_amount',
+            dimension: 'date',
+            aggregation: 'sum' as const,
+            showLegend: true,
+            showAnimation: true
+          }, 
+          position: { x: 340, y: 20 }, 
+          size: { width: 600, height: 350 } 
+        },
+        { 
+          id: '4', 
+          type: 'pie-chart' as const, 
+          title: 'Mix de Canais', 
+          config: {
+            dataSource: 'channels' as const,
+            metric: 'revenue',
+            dimension: 'channel_name',
+            aggregation: 'sum' as const,
+            limit: 5,
+            sortBy: 'desc' as const,
+            showLegend: true,
+            showAnimation: true
+          }, 
+          position: { x: 960, y: 20 }, 
+          size: { width: 350, height: 350 } 
+        },
       ]
     },
     {
@@ -61,9 +103,35 @@ export default function AdvancedDashboardPage() {
       name: 'Visão do Gerente',
       description: 'Foco em operações e eficiência',
       widgets: [
-        { id: '1', type: 'metric-card' as const, title: 'Pedidos Hoje', config: {}, position: { x: 20, y: 20 }, size: { width: 250, height: 150 } },
-        { id: '2', type: 'heatmap' as const, title: 'Mapa de Calor - Horários', config: {}, position: { x: 290, y: 20 }, size: { width: 500, height: 300 } },
-        { id: '3', type: 'table' as const, title: 'Performance por Turno', config: {}, position: { x: 810, y: 20 }, size: { width: 400, height: 300 } },
+        { 
+          id: '1', 
+          type: 'metric-card' as const, 
+          title: 'Pedidos Hoje', 
+          config: {
+            dataSource: 'sales' as const,
+            metric: 'count',
+            aggregation: 'count' as const,
+            showLegend: true,
+            showAnimation: true
+          }, 
+          position: { x: 20, y: 20 }, 
+          size: { width: 250, height: 150 } 
+        },
+        { 
+          id: '3', 
+          type: 'table' as const, 
+          title: 'Performance por Turno', 
+          config: {
+            dataSource: 'sales' as const,
+            metric: 'total_amount',
+            dimension: 'hour',
+            aggregation: 'sum' as const,
+            limit: 10,
+            sortBy: 'desc' as const
+          }, 
+          position: { x: 810, y: 20 }, 
+          size: { width: 400, height: 300 } 
+        },
       ]
     },
     {
@@ -71,9 +139,23 @@ export default function AdvancedDashboardPage() {
       name: 'Visão de Marketing',
       description: 'Foco em produtos e clientes',
       widgets: [
-        { id: '1', type: 'bar-chart' as const, title: 'Top Produtos', config: {}, position: { x: 20, y: 20 }, size: { width: 500, height: 350 } },
-        { id: '2', type: 'funnel' as const, title: 'Funil de Conversão', config: {}, position: { x: 540, y: 20 }, size: { width: 400, height: 350 } },
-        { id: '3', type: 'cohort' as const, title: 'Análise de Coorte', config: {}, position: { x: 20, y: 390 }, size: { width: 920, height: 350 } },
+        { 
+          id: '1', 
+          type: 'bar-chart' as const, 
+          title: 'Top Produtos', 
+          config: {
+            dataSource: 'products' as const,
+            metric: 'quantity',
+            dimension: 'product_name',
+            aggregation: 'sum' as const,
+            limit: 10,
+            sortBy: 'desc' as const,
+            showLegend: true,
+            showAnimation: true
+          }, 
+          position: { x: 20, y: 20 }, 
+          size: { width: 500, height: 350 } 
+        },
       ]
     }
   ]

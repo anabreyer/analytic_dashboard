@@ -290,10 +290,10 @@ export default function DashboardPage() {
                 Filtros
               </Button>
               <Button
-                onClick={() => setShowInsights(!showInsights)}
+                onClick={() => setShowProductAnalysis(!showProductAnalysis)}
                 variant="secondary"
-                icon={Brain}
-                className={showInsights ? 'bg-purple-100 border-purple-500' : ''}
+                icon={Package}
+                className={showProductAnalysis ? 'bg-purple-100 border-purple-500' : ''}
               >
                 Análise de Produto
               </Button>

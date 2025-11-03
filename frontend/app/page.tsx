@@ -26,7 +26,7 @@ import { TrendingUp } from 'lucide-react' // Se ainda não tiver
 // Import NEW components
 import { MultiDimensionalFilter } from '@/components/filters/MultiDimensionalFilter'
 
-import { ProductTimelineChart } from '@/components/dashboard/ProductTimelinechart'
+import { ProductTimelineChart } from '@/components/dashboard/ProductTimelineChart'
 
 // User profiles configuration
 const USER_PROFILES = {

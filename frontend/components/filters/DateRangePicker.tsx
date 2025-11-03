@@ -71,7 +71,7 @@ export function DateRangePicker({ startDate, endDate, onDateChange }: DateRangeP
       <label className="text-sm font-medium text-gray-700">Período</label>
       <div className="flex flex-col sm:flex-row gap-2">
         <TremorDateRangePicker
-          value={{ from: startDate, to: endDate }}
+          value={{ from: startDate || undefined, to: endDate || undefined }}
           onValueChange={handleChange}
           placeholder="Selecione o período"
           selectPlaceholder="Selecionar"
